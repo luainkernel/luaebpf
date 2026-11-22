@@ -48,7 +48,7 @@ requires, installed as source".
 ### What the body requires
 
 The order in which `require` finds a module in the body is in
-[Program files](../../guide/02-running-scripts.md#program-files). `compile`, in `init.lua`, builds
+[Program files](https://luainkernel.github.io/lunatik/topics/02-running-scripts.md.html#program-files). `compile`, in `init.lua`, builds
 it: while the body runs, `package.path` is the compile-time modules in `bin/luaebpf/lib/` and
 `package.cpath` is empty, a searcher `init.lua` adds finds the compiler's own `luaebpf.*` through
 the host's path, and the last one, which `proto.lua` adds, loads a module under `/lib/modules/lua/`,
@@ -147,7 +147,7 @@ its line and its reason, and its count summed over the entries of the possible C
 report reads the lines the kernel holds for the running program, not the object on disk, which a
 `make install` or a `lunatik bpf -o` may have written again since the run. What
 `run`, `stop` and `unload` do with these is in
-[Compiled programs](../../guide/02-running-scripts.md#compiled-programs).
+[Compiled programs](https://luainkernel.github.io/lunatik/topics/02-running-scripts.md.html#compiled-programs).
 
 ### Building and installing
 
@@ -156,7 +156,7 @@ puts `lunatic` beside `lunatik`, the compiler under the host's Lua path as `luae
 loader under its C path, and then runs `lunatik bpf` over the program files of `examples/` and
 `tests/`, but the `luaebpf` suite's, leaving each object at its script's path under
 `/usr/local/lib/bpf/luaebpf/`, `LUAEBPF_OBJECTS_INSTALL_PATH`, where `lunatik run` looks for it
-([Compiled programs](../../guide/02-running-scripts.md#compiled-programs)), once it has removed
+([Compiled programs](https://luainkernel.github.io/lunatik/topics/02-running-scripts.md.html#compiled-programs)), once it has removed
 what its previous run left under `examples/` and `tests/` there.
 
 ## The translator

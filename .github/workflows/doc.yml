@@ -1,0 +1,50 @@
+#
+# SPDX-FileCopyrightText: (c) 2026 Ring Zero Desenvolvimento de Software LTDA
+# SPDX-License-Identifier: MIT OR GPL-2.0-only
+#
+
+name: Build Docs
+on:
+  pull_request:
+  push:
+    branches:
+    - master
+  release:
+    types:
+    - published
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && github.ref || 'gh-pages' }}
+jobs:
+  build:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Checkout Lunatik's style
+      # the site takes the template, the stylesheet and the search of Lunatik's, whose master config.ld reads at .lunatik/
+      run: git clone --depth 1 https://github.com/luainkernel/lunatik.git .lunatik
+    - name: Setup dependencies
+      run: |
+        # LDoc runs on lua5.4, the newest Lua the archive builds it for, and discount, which the archive dropped, comes from luarocks for that Lua
+        bash harness/tools/retry.sh 5 90 sudo sh -c 'apt-get update && apt-get install -y lua5.5 lua5.4 lua-ldoc luarocks liblua5.4-dev libmarkdown2-dev'
+        bash harness/tools/retry.sh 5 90 sudo luarocks --lua-version=5.4 install discount DISCOUNT_INCDIR=/usr/include/$(gcc -print-multiarch) DISCOUNT_LIBDIR=/usr/lib/$(gcc -print-multiarch)
+    - name: Build docs
+      run: |
+        # the template reads the release a page belongs to and the releases the site serves; this site serves one, unlisted
+        : > doc/.tags
+        : > doc/.releases
+        ldoc .
+        cp .lunatik/doc/style/site.js site/
+        cp -r .lunatik/doc/style/fonts site/
+        lua5.5 .lunatik/doc/style/search.lua site
+    - name: Deploy
+      # the site shows the latest release, so a push to master builds it and deploys nothing
+      if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: site

@@ -1,2 +1,4 @@
 /bytecode/
 *.so
+/site/
+/.lunatik

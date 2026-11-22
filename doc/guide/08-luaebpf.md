@@ -697,7 +697,7 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 
 A program file, `<name>.bpf.lua`, may declare several programs. Each is named by the `name` its
 constructor takes, or after the file, and `lunatik run --dev` attaches every one of them, as
-[Compiled programs](02-running-scripts.md#compiled-programs) describes.
+[Compiled programs](https://luainkernel.github.io/lunatik/topics/02-running-scripts.md.html#compiled-programs) describes.
 
 `lunatik bpf` compiles for the kernel `lunatik.config` names, which `make` writes from the kernel
 tree Lunatik is built against. Three facts of that kernel change what compiles:
@@ -711,6 +711,6 @@ tree Lunatik is built against. Three facts of that kernel change what compiles:
 The offsets of the context fields come from the kernel's BTF, `/sys/kernel/btf/vmlinux` unless
 `--btf` names another file, so a program that reads its context, or the packet, compiles only
 where that BTF is. Compiling for another kernel is in
-[Program files](02-running-scripts.md#program-files). A TC program needs libbpf 1.3.0 or later on
+[Program files](https://luainkernel.github.io/lunatik/topics/02-running-scripts.md.html#program-files). A TC program needs libbpf 1.3.0 or later on
 the machine that loads it.
 

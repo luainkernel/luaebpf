@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>lunatik · luaebpf</title>
+    <meta name="description" content="Lua compiled to eBPF for Lunatik."/>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 98 100'%3E%3Ccircle cx='36.2' cy='63.8' r='34.7' fill='none' stroke='%238a91a3' stroke-width='3' stroke-dasharray='6 4'/%3E%3Cpath fill='%2313139a' fill-rule='evenodd' d='M41 28.5a28.1 28.1 0 1 0 56.2 0a28.1 28.1 0 1 0 -56.2 0ZM46.6 40.3a8.4 8.4 0 1 0 16.8 0a8.4 8.4 0 1 0 -16.8 0Z'/%3E%3Ccircle fill='%2313139a' cx='36.2' cy='61.5' r='8.9'/%3E%3C/svg%3E"/>
+    <link rel="stylesheet" href="../ldoc.css" type="text/css" />
+    <script>try { var t = localStorage.getItem('lunatik-theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) { }</script>
+    <script src="../search.js" defer=""></script>
+    <script src="../site.js" defer=""></script>
+</head>
+<body data-root="../">
+
+<header class="topbar">
+    <button class="icon-btn nav-toggle" id="nav" type="button" aria-label="Menu" aria-expanded="false" aria-controls="sidebar">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <a class="brand" href="../index.html">
+        <svg viewBox="0 0 98 100" aria-hidden="true"><circle class="logo-orbit" cx="36.2" cy="63.8" r="34.7"/><path class="logo-mark" fill-rule="evenodd" d="M41 28.5a28.1 28.1 0 1 0 56.2 0a28.1 28.1 0 1 0 -56.2 0ZM46.6 40.3a8.4 8.4 0 1 0 16.8 0a8.4 8.4 0 1 0 -16.8 0Z"/><circle class="logo-mark" cx="36.2" cy="61.5" r="8.9"/></svg>
+        <span>luaebpf</span>
+    </a>
+    <nav class="versions" aria-label="Documentation version">
+        <span aria-current="page">master</span>
+    </nav>
+    <div class="search" role="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke-width="2"/></svg>
+        <input id="q" type="search" placeholder="Search" autocomplete="off" aria-label="Search" aria-controls="results"/>
+        <kbd>/</kbd>
+        <ul class="results" id="results" hidden=""></ul>
+    </div>
+    <nav class="top-links" aria-label="Site">
+        <a href="../topics/08-luaebpf.md.html">Guide</a>
+        <a href="../index.html#api-reference">API</a>
+        <a class="star" href="https://github.com/luainkernel/luaebpf" title="Star luaebpf on GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>Star on GitHub</a>
+        <a class="donate" href="https://luainkernel.github.io/lunatik/index.html#support"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Donate</a>
+        <button class="icon-btn" id="theme" type="button" aria-label="Switch between light and dark">
+            <svg class="theme-icon-light" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <svg class="theme-icon-dark" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+    </nav>
+</header>
+
+
+<div class="layout">
+
+<aside class="sidebar" id="sidebar" aria-label="Documentation">
+<h2>Guide</h2>
+<ul>
+  <li><a href="../topics/08-luaebpf.md.html">Compiling Lua to eBPF</a></li>
+  <li><a href="../topics/09-luaebpf-by-example.md.html">Lua to eBPF by example</a></li>
+</ul>
+<h2>Lua API</h2>
+<h3>Compiler</h3>
+<ul class="mono">
+  <li><a href="../modules/luaebpf.html">luaebpf</a></li>
+</ul>
+<h3>Program file</h3>
+<ul class="mono">
+  <li><a href="../modules/bpf.map.html">bpf.map</a></li>
+  <li><a href="../modules/bpf.tc.html">bpf.tc</a></li>
+  <li><a href="../modules/bpf.vmlinux.html">bpf.vmlinux</a></li>
+  <li><a href="../modules/bpf.xdp.html">bpf.xdp</a></li>
+  <li><a href="../modules/lunatik.html" aria-current="page">lunatik</a></li>
+</ul>
+</aside>
+
+<main class="content" id="content">
+
+<div class="crumbs"><a href="../index.html#api-reference">Lua API</a> · <a href="../index.html#api-declarations">Program file</a></div>
+<h1>lunatik<span class="kind">Module</span></h1>
+<p class="lead">Names a kernel Lua runtime in a program file.</p>
+ The compile-time twin of the kernel <a href="../modules/lunatik.html#">lunatik</a>: <a href="../modules/lunatik.html#runtime">runtime</a> takes the script a runtime runs, as the
+ kernel&rsquo;s does, and names the runtime <code>lunatik run</code> starts from that script instead of creating
+ one.
+    <h2 id="usage">Usage</h2>
+        <pre class="example">local xdp     = require(&quot;bpf.xdp&quot;)
+local lunatik = require(&quot;lunatik&quot;)
+local struct  = require(&quot;struct&quot;)
+local vmlinux = require(&quot;bpf.vmlinux&quot;)
+local action  = require(&quot;linux.xdp&quot;).action
+local eth     = require(&quot;linux.eth&quot;)
+
+local iphdr  = struct(vmlinux.layout(&quot;iphdr&quot;))
+local udphdr = struct(vmlinux.layout(&quot;udphdr&quot;))
+
+local limits = lunatik.runtime(&quot;limits&quot;)
+
+return xdp.program(function(ctx)
+    local p = ctx:packet()
+    local ip = iphdr:view(p, eth.HLEN)
+    local port = udphdr:view(p, eth.HLEN + ip.ihl * 4).dest
+    local verdict = limits:run(port, #p)
+    if verdict then
+        return verdict
+    end
+    return action.PASS
+end, {default = action.PASS})
+</pre>
+
+<h2 id="Naming_a_kernel_Lua_runtime_in_a_program_file">Naming a kernel Lua runtime in a program file </h2>
+<div class="tbl"><table class="function_list">
+	<tr>
+	<td class="name"><a href="#runtime">runtime (script)</a></td>
+	<td class="summary">Names the kernel Lua runtime a program calls.</td>
+	</tr>
+</table></div>
+
+    <h2 class="section-header" id="Naming_a_kernel_Lua_runtime_in_a_program_file-details"><a name="Naming_a_kernel_Lua_runtime_in_a_program_file"></a>Naming a kernel Lua runtime in a program file  in detail</h2>
+
+          <div class="section-description">
+           <a href="../modules/lunatik.html#runtime">lunatik.runtime</a> runs in the body of a program file, under <code>lunatik bpf</code>, and names a runtime
+ by the script it runs, which <code>lunatik run</code> starts; a program&rsquo;s own function calls the runtime&rsquo;s
+ <code>run</code> method, and the call lowers to the kfunc of the program&rsquo;s type, <code>bpf_luaxdp_run</code> in an XDP
+ program and <code>bpf_luatc_run</code> in a TC one. The call answers the verdict the runtime&rsquo;s callback
+ returns, or nil, and the program tests the answer before it reads it. A kernel script the body
+ requires that itself requires <a href="../modules/lunatik.html#">lunatik</a> gets this twin, which holds <a href="../modules/lunatik.html#runtime">runtime</a> alone.
+          </div>
+    <dl class="function">
+    <dt id="runtime"><a name="runtime"></a><strong>runtime (script)</strong></dt>
+    <dd>
+    Names the kernel Lua runtime a program calls.</p>
+
+<p> Inside a program&rsquo;s own function the runtime&rsquo;s <code>run</code> method is called with numbers,
+ <code>limits:run(a, b)</code>, and the call runs the callback the runtime registered with the attach of the
+ program&rsquo;s type, <code>xdp.attach</code> or <code>tc.attach</code>, handing it the program&rsquo;s context and each argument as
+ a 64-bit integer, in order, which the callback reads as <code>ctx:argument():getint64(0)</code>, <code>getint64(8)</code>
+ and on. The call answers the verdict the callback returns, or <code>nil</code> where the kfunc returns <code>-1</code>:
+ no softirq runtime of that name with a callback attached, a callback that raises, returns <code>nil</code> or
+ a value outside <code>linux.xdp.action</code> or <code>linux.tc.action</code>, or one that returns
+ <code>linux.tc.action.UNSPEC</code>, which is <code>-1</code>. The program tests the answer before it reads it, with
+ <code>if v then</code>, <code>if not v then</code>, <code>v == nil</code> or <code>v ~= nil</code>; every other use is refused at its line, and
+ so are a call of the runtime itself, <code>limits(a)</code>, and any other method.
+ An object with such a call loads where the module publishes its BTF (<code>make btf_install</code>).
+
+
+    <h3>Parameters</h3>
+    <ul>
+        <li><span class="parameter">script</span>
+            <span class="types"><a class="type" href="https://www.lua.org/manual/5.5/manual.html#6.4">string</a></span>
+         the script the runtime runs, as <code>lunatik run</code> takes it, its path below
+   <code>/lib/modules/lua/</code> without <code>.lua</code>
+        </li>
+    </ul>
+
+    <h3>Returns</h3>
+    <ol>
+
+           <span class="types"><a class="type" href="https://www.lua.org/manual/5.5/manual.html#6.6">table</a></span>
+        the runtime, whose <code>run</code> a program calls
+    </ol>
+
+    <h3>Raises</h3>
+    <code>&lt;file&gt;:&lt;line&gt;: lunatik.runtime takes a script</code>, the line that called it
+
+
+
+</dd>
+</dl>
+
+
+</main>
+
+<aside class="toc" aria-label="On this page">
+<nav id="toc"><h2>On this page</h2></nav>
+</aside>
+
+</div>
+
+<footer class="site-footer">
+<div>
+<span>luaebpf master ·
+MIT or GPL-2.0-only · <a href="https://github.com/luainkernel/luaebpf">github.com/luainkernel/luaebpf</a></span>
+<span>Built with <a href="https://github.com/lunarmodules/LDoc">LDoc 1.5.0</a> · 2026-11-22 17:27:07</span>
+</div>
+</footer>
+</body>
+</html>
+

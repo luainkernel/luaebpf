@@ -73,9 +73,10 @@ end
 -- @function luaebpf.programs.declare
 -- @tparam string constructor the constructor the program file called, `xdp.program` or its peer
 -- @tparam function fn the program
--- @tparam table program `{section, default, error, name, license, context, kfunc, actions}`,
---   `actions` the verdicts of its type, `{first, last, name}`, and `license`, `Dual MIT/GPL` where
---   it is nil
+-- @tparam table program `{section, default, error, name, license, context, kfunc, actions,
+--   verdict, structops}`, `actions` the verdicts of its type, `{first, last, name}`, `license`,
+--   `Dual MIT/GPL` where it is nil, and `verdict` false for a struct_ops callback, which returns a
+--   plain value rather than a verdict and so names no `default` or `actions`
 -- @treturn table the program, with `fn`
 -- @raise `<constructor> takes a Lua function`, or `<file>:<line>: <constructor>'s default verdict
 --   is not an integer` or `is not <actions.name>`, or `<file>:<line>: <constructor>'s license is
@@ -85,9 +86,12 @@ function programs.declare(constructor, fn, program)
 	if type(fn) ~= "function" or debug.getinfo(fn, "S").what == "C" then
 		error(string.format("%s takes a Lua function", constructor), 2) -- each constructor tail-calls declare
 	end
-	local expected = unmet(program)
-	if expected ~= nil then
-		refuse(constructor, fn, "default verdict is not " .. expected)
+	-- a struct_ops callback returns a plain value its kernel struct types, not a verdict
+	if program.verdict ~= false then
+		local expected = unmet(program)
+		if expected ~= nil then
+			refuse(constructor, fn, "default verdict is not " .. expected)
+		end
 	end
 	if program.license == nil then
 		program.license = LICENSE

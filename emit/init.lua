@@ -265,7 +265,9 @@ end
 ---
 -- Compiles one program: its function, and every function that function reaches.
 -- @function luaebpf.emit.program
--- @tparam table program `{name, fn, default, error, drop, names, places, context, kfunc, actions}`
+-- @tparam table program `{name, fn, default, error, drop, names, places, context, kfunc, actions,
+--   verdict, structops}`, `verdict` false and `structops` true for a struct_ops callback, which
+--   returns a plain value and takes no context argument
 -- @treturn table the frames, the program's own first
 -- @raise `a program takes one argument, the context`, and `<file>:<line>: <reason>` for every
 --   construct the subset refuses
@@ -273,7 +275,7 @@ function emit.program(program)
 	local unit = {
 		functions = {}, order = {}, lowering = {}, names = program.names or {}, places = program.places,
 		default = program.default, error = program.error, drop = program.drop, context = program.context,
-		kfunc = program.kfunc, actions = program.actions,
+		kfunc = program.kfunc, actions = program.actions, verdict = program.verdict ~= false,
 		-- no lowering can require luaebpf.emit back; read here, after the body that may set them ran
 		maygoto = emit.maygoto, unaligned = emit.unaligned, bigendian = emit.bigendian,
 		-- read here, at each compile, so from the directory luaebpf.proto.scripts named for it
@@ -281,11 +283,14 @@ function emit.program(program)
 		subprogram = subprogram,
 	}
 	local read = proto.read(program.fn)
-	if read.numparams > 1 then
-		error(string.format("%s:%d: a program takes one argument, the context",
-			(read.source:gsub("^@", "")), read.linedefined), 0)
+	local params = program.structops and {} or {CTX}
+	if read.numparams > #params then
+		error(string.format("%s:%d: %s",
+			(read.source:gsub("^@", "")), read.linedefined,
+			program.structops and "a scheduler callback takes no argument yet"
+			or "a program takes one argument, the context"), 0)
 	end
-	compile(unit, program.fn, read, program.name, {CTX}, true)
+	compile(unit, program.fn, read, program.name, params, true)
 	return unit.order
 end
 

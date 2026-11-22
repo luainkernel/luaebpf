@@ -32,19 +32,36 @@ jobs:
         # LDoc runs on lua5.4, the newest Lua the archive builds it for, and discount, which the archive dropped, comes from luarocks for that Lua
         bash harness/tools/retry.sh 5 90 sudo sh -c 'apt-get update && apt-get install -y lua5.5 lua5.4 lua-ldoc luarocks liblua5.4-dev libmarkdown2-dev'
         bash harness/tools/retry.sh 5 90 sudo luarocks --lua-version=5.4 install discount DISCOUNT_INCDIR=/usr/include/$(gcc -print-multiarch) DISCOUNT_LIBDIR=/usr/lib/$(gcc -print-multiarch)
+    - name: Name the release the site serves
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: echo "RELEASE=$(gh api repos/${{ github.repository }}/releases/latest --jq .tag_name || true)" >> "$GITHUB_ENV"
     - name: Build docs
       run: |
-        # the template reads the release a page belongs to and the releases the site serves; this site serves one, unlisted
-        : > doc/.tags
-        : > doc/.releases
+        # the template reads the release a page belongs to and the releases the site serves: the root's pages
+        # name the latest release, and master's, under master/, name none
+        case "${{ github.event_name }}" in
+        release|workflow_dispatch) echo "$RELEASE" > doc/.tags ;;
+        *) : > doc/.tags ;;
+        esac
+        echo "$RELEASE" > doc/.releases
         ldoc .
         cp .lunatik/doc/style/site.js site/
         cp -r .lunatik/doc/style/fonts site/
         lua5.5 .lunatik/doc/style/search.lua site
-    - name: Deploy
-      # the site shows the latest release, so a push to master builds it and deploys nothing
+    - name: Deploy the release
+      # a dispatch rebuilds the root from master, for v0.1, whose tree has no config.ld
       if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: site
+        keep_files: true
+    - name: Deploy master
+      if: ${{ github.event_name == 'push' }}
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: site
+        destination_dir: master
+        keep_files: true

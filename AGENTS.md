@@ -30,7 +30,7 @@ calls the kernel Lua scripts Lunatik runs.
 
 ## Build, install, test
 
-luaebpf builds and runs inside a Lunatik checkout, which mounts it at `bin/luaebpf` (luainkernel/lunatik#2598):
+luaebpf builds and runs inside a Lunatik checkout, which mounts it at `luaebpf/` (luainkernel/lunatik#2598):
 Lunatik's Makefile builds `lunatic`, the bytecode tables and the loader against its own `lua/` and
 libbpf, and installs the compiler where the CLI's Lua finds it; the program files of its tests live in
 Lunatik's `tests/luaebpf/`, and its examples in Lunatik's `examples/`. A change is built, installed and
@@ -44,8 +44,8 @@ Lunatik's `autogen/specs.lua` through a pull request of Lunatik.
 ### Checks
 
 luaebpf has no checks of its own: the shared ones run from `harness/tools/checks/`, reading this tree
-through `.agents/harness.conf`, and Lunatik's own, `bundled.sh` and `hardcoded.sh` among them, run on
-the bump that brings a change to it.
+through `.agents/harness.conf`. Lunatik's own read Lunatik's tree, where a change of luaebpf is a move
+of the mount and none of its files.
 
 ## Releases
 

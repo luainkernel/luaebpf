@@ -7,6 +7,14 @@
 -- The returns, CALL and the invocation of a subprogram: a call is a method of a proxy, a call into the
 -- kernel Lua runtime, or a BPF-to-BPF call to a Lua function the file declares, whose abort comes back
 -- through a flag in the caller's frame.
+--
+-- A compiled call passes numbers and packets, the words the kernel lets a function read, and
+-- refuses every other type, a kernel pointer among them: `KPTR`, the opaque `struct X *` a
+-- struct_ops callback parameter carries, `struct task_struct *p` the one the scheduler callbacks
+-- take. The kernel holds it, so it joins the proxy class the frame refuses as a value: it may not be
+-- read, dereferenced, compared, returned or passed to a compiled call, only handed on to a kfunc,
+-- which takes it by the register `KPTR` keeps it in. The callback that carries it, and the kfunc it
+-- flows into, come later; this names the type the lattice refuses everywhere else.
 -- @module luaebpf.emit.call
 
 local insn    = require("luaebpf.insn")
@@ -22,9 +30,15 @@ local METHOD  <const> = loads.METHOD
 local NIL     <const> = frame.NIL
 local PACKET  <const> = packet.PACKET
 
+-- an opaque kernel pointer a struct_ops callback parameter carries, which the kernel holds and no
+-- compiled code reads: it joins the proxy class, so getreg refuses it as a value, moveslot keeps
+-- its register live across a call, and a method or a compiled call on it is refused; only a kfunc,
+-- which takes it by that register, may be handed one
+local KPTR    <const> = frame.type("kernel pointer", "proxy")
+
 local MAXARGS <const> = 4 -- MAX_BPF_FUNC_REG_ARGS, less the register the abort pointer takes
 
-local call = {}
+local call = {KPTR = KPTR}
 
 -- whether the compiler holds a verdict that is none of its program type's actions
 local function isoutside(actions, value)

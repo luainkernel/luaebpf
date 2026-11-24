@@ -10,9 +10,11 @@
 -- are its callbacks, each compiled to eBPF and run by the kernel at a scheduling event, and its
 -- scalar fields configure it. `scheduler` takes those as a table and hands the callbacks to the
 -- compiler; the object it writes carries a `.struct_ops` section libbpf makes a struct_ops map of,
--- which `bpf_map__attach_struct_ops` registers with sched_ext. libbpf matches each member the
--- object sets to the kernel's `sched_ext_ops` by name, so the object carries only the members the
--- scheduler names, at the kernel's own byte offsets and whole size.
+-- which `lunatik run`, with no device, loads and registers with sched_ext through
+-- `bpf_map__attach_struct_ops`, pinning the link that holds the scheduler until `lunatik stop`
+-- unregisters it. libbpf matches each member the object sets to the kernel's `sched_ext_ops` by
+-- name, so the object carries only the members the scheduler names, at the kernel's own byte
+-- offsets and whole size.
 --
 -- This first slice takes `name`, the scheduler's name, and `init`, a callback of no arguments that
 -- returns `0` to let the scheduler load. The scheduler loads on a kernel built with

@@ -257,6 +257,9 @@ end
 -- it out of that load, for the BTF's byte order; one no load of eight bytes covers is absent. A
 -- union such as `__sk_buff`'s `__bpf_md_ptr` members, and a nested struct, are absent, and `struct`
 -- reads the gap they and the bitfields leave as padding.
+--
+-- A member typed `__le16`, `__le32` or `__le64` carries no mark, so it reads in the kernel's byte
+-- order: right on a little-endian kernel, byte-swapped on a big-endian one.
 -- @function bpf.vmlinux.layout
 -- @tparam string what the struct's name, as `bpftool btf dump` prints it
 -- @treturn table `{size = bytes, fields = {{name, offset, size, signed, bigendian}, ...},

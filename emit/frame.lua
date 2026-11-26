@@ -169,6 +169,7 @@ local function same(a, b)
 	end
 	return a.t == b.t and a.k == b.k and a.map == b.map and a.codec == b.codec
 end
+frame.same = same
 
 local function copy(state)
 	local out = {}

@@ -26,7 +26,7 @@ calls the kernel Lua scripts Lunatik runs.
 | `.agents/rules/` | luaebpf's own rules for a kind of file |
 | `.agents/harness.conf` | what the shared scripts of `harness/` read of this tree |
 | `.claude/` | Claude Code's wiring of the guards, the checks, the skills, the agents and the rules, with no logic of its own |
-| `.github/` | the CI workflow |
+| `.github/` | the CI workflows |
 
 ## Build, install, test
 

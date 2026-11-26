@@ -603,6 +603,10 @@ Give the variable one type on every path: `local v = 0`. These are refused too:
   called it on the packet: "'getbyte' takes the packet, not a packet that may be nil". Lua raises
   on the pass where the variable is not the packet, and the read would go through whatever word the
   register holds there.
+* A method kept in a variable and called through it: "'getbyte' is called through a variable, not
+  where it was read", and for the `run` of a runtime, "a runtime is called through its method; write
+  'limits:run(...)'". Lua calls whatever the variable holds, which where two paths join may be
+  either of two methods, and the compiler lowers a method for the call it is read for.
 * A verdict that may be nil: "the verdict may be nil here; test it first". The kernel would read
   nil as 0, which is an action.
 * A verdict that may be a boolean: "the verdict may be a boolean here; return an action". The
@@ -646,6 +650,7 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 | a runtime has no method 'call'; write 'limits:run(...)' | `limits:call(1)` | `limits:run(1)` |
 | the function needs 528 bytes of stack, over the 512 eBPF allows | a call into a runtime named by 480 bytes | a shorter name |
 | 'getbyte' takes the packet, not a packet that may be nil | `p:getbyte(i)` in a loop that sets `p = nil` | a variable of its own for nil |
+| 'getbyte' is called through a variable, not where it was read | `local m, s, k`, then `k = "getbyte"; s = p; m = p[k]` and `m(s, 0)` | `p:getbyte(0)` |
 | a number that may be nil cannot be compared with a number here | `==` on a variable nil on one path | `local v = 0` |
 | a number that may be nil has no truth value in a compiled function | `if v then`, `v` nil on one path | `local v = 0`, then `if v ~= 0 then` |
 | the verdict may be nil here; test it first | `return v`, `v` nil on one path | a verdict on every path |

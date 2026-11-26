@@ -292,9 +292,16 @@ what `frame.lua` holds:
   `LEN`. A global or an upvalue resolves to the value the body left, a field of a table the
   compiler holds to that field's value, read when the function is compiled, and an index into a
   map to the map's helpers; a field of the context or of a struct map value goes to `context.lua`
-  or `map.lua`, and a method call on a proxy is read back by `CALL`. `CALL` holds a method to the
-  value past it, the one it was read from: a loop's first pass may have read the method before a
-  later pass widened that value.
+  or `map.lua`, and a method call on a proxy is read back by `CALL`. A `GETTABLE` whose key is a
+  string the compiler holds reads the name as `GETFIELD` does, and as `SELF` does where the `MOVE`
+  of a receiver past its result comes before it: Lua writes `x.name` and `x:name` so past the
+  function's 256th constant, or for a name longer than 40 bytes (`luaK_indexed`, `luaK_self`).
+  `CALL` holds a method to the value past it, the one it was read from: a loop's first pass may
+  have read the method before a later pass widened that value. It holds it to the register it was
+  read into too, since a variable may hold either of two methods where paths join, and to a call
+  that passes that value, since one with no argument passes nothing past the method. The `run` of
+  a runtime is held alike in `runtime.lua`, which keeps the runtime it was read off as a method
+  keeps its receiver, outside the field a table of the body is read from.
 * `arithmetic.lua`: the arithmetic and bitwise opcodes and their forms with a constant, `UNM`,
   `BNOT` and `NOT`, with Lua's semantics over 64-bit integers. `MMBIN` and its kin, which the VM
   runs only when an operand is not a number, emit nothing, since an operand that is not a number is

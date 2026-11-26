@@ -158,10 +158,13 @@ end
 
 -- the call passes A+1 and the method is lowered for its recv, which a join keeps from a loop's first pass
 local function received(f, pc, ins, state, callee)
-	local recv = state[ins.a + 1]
+	local recv = ins.b > 1 and state[ins.a + 1] or nil -- a call with no argument passes nothing at A+1
 	if not frame.same(recv, callee.recv) then
 		frame.refuse(f, pc, "'%s' takes the %s, not a %s", callee.name, frame.typename(callee.recv),
 			frame.typename(recv))
+	end
+	if callee.register ~= ins.a then -- a variable may hold either of two methods, of which a join keeps one
+		frame.refuse(f, pc, "'%s' is called through a variable, not where it was read", callee.name)
 	end
 end
 
@@ -173,7 +176,7 @@ function call.CALL(f, pc, ins, state)
 	if callee ~= nil and callee.t == METHOD then
 		received(f, pc, ins, state, callee)
 		packet.method(f, pc, ins, state, callee)
-	elseif callee ~= nil and runtime.isproxy(callee.k) then
+	elseif callee ~= nil and runtime.iscallee(callee) then
 		runtime.call(f, pc, ins, state, callee)
 	else
 		subprogram(f, pc, ins, state, callee)

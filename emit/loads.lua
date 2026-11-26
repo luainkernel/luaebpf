@@ -126,9 +126,7 @@ function loads.GETTABUP(f, pc, ins, state)
 	frame.resolve(f, pc, state, ins.a, value, key)
 end
 
-function loads.GETFIELD(f, pc, ins, state)
-	local key = tostring(frame.constant(f, pc, ins.c))
-	local container = state[ins.b]
+local function field(f, pc, ins, state, container, key)
 	if container ~= nil and container.t == CTX then
 		return context.contextfield(f, pc, key)
 	end
@@ -143,6 +141,10 @@ function loads.GETFIELD(f, pc, ins, state)
 	end
 	local name = container ~= nil and container.name or "a table"
 	frame.resolve(f, pc, state, ins.a, lookup(f, pc, container, key, name), key)
+end
+
+function loads.GETFIELD(f, pc, ins, state)
+	field(f, pc, ins, state, state[ins.b], tostring(frame.constant(f, pc, ins.c)))
 end
 
 function loads.SETFIELD(f, pc, ins, state)
@@ -191,9 +193,40 @@ function loads.GETI(f, pc, ins, state)
 	frame.resolve(f, pc, state, ins.a, lookup(f, pc, container, ins.c, name))
 end
 
+-- what a compiled method is called on: a runtime, a proxy, or a struct codec of the body, whose view the call makes
+local function receiver(value)
+	return value ~= nil and (runtime.isproxy(value.k) or (value.t & frame.classes.proxy) ~= 0
+		or packet.iscodec(value))
+end
+
+-- the call reads the method back, held to the register it is read into and to recv at A+1
+local function method(f, pc, ins, state, recv, name)
+	if runtime.isproxy(recv.k) then
+		return runtime.self(f, pc, ins, state, name)
+	end
+	state[ins.a] = {t = METHOD, name = name, recv = recv, register = ins.a}
+end
+
+-- whether the instruction before is the MOVE luaK_self writes of the receiver past the method
+local function isself(f, pc, ins)
+	local move = f.proto.code[pc - 1]
+	return move ~= nil and move.op == proto.opcodes.MOVE and move.a == ins.a + 1 and move.b == ins.b
+end
+
+-- Lua writes x.name past the 256th constant, or for a name past 40 bytes, as GETTABLE, and x:name as MOVE and GETTABLE
+local function byname(f, pc, ins, state, container, name)
+	if isself(f, pc, ins) and receiver(container) then
+		return method(f, pc, ins, state, container, name)
+	end
+	field(f, pc, ins, state, container, name)
+end
+
 function loads.GETTABLE(f, pc, ins, state)
 	local key = state[ins.c]
 	local container = state[ins.b]
+	if key ~= nil and type(key.k) == "string" then
+		return byname(f, pc, ins, state, container, key.k)
+	end
 	indexable(f, pc, container)
 	if container ~= nil and maps.declares(container.k) then
 		return map.mapread(f, pc, ins, state, container.k)
@@ -205,22 +238,14 @@ function loads.GETTABLE(f, pc, ins, state)
 	frame.resolve(f, pc, state, ins.a, lookup(f, pc, container, key.k, name))
 end
 
--- what a compiled method is called on: a proxy, or a struct codec of the body, whose view the call makes
-local function receiver(value)
-	return value ~= nil and ((value.t & frame.classes.proxy) ~= 0 or packet.iscodec(value))
-end
-
 -- the receiver goes to A+1 and the method to A, which the call then reads back
 function loads.SELF(f, pc, ins, state)
 	local recv = state[ins.b]
-	if recv ~= nil and runtime.isproxy(recv.k) then
-		return runtime.self(f, pc, ins, state)
-	end
 	if not receiver(recv) then
 		frame.refuse(f, pc, "a method call cannot be compiled")
 	end
 	moveslot(f, state, ins.a + 1, ins.b)
-	state[ins.a] = {t = METHOD, name = tostring(frame.constant(f, pc, ins.c)), recv = recv}
+	method(f, pc, ins, state, recv, tostring(frame.constant(f, pc, ins.c)))
 end
 
 function loads.LEN(f, pc, ins, state)

@@ -22,6 +22,7 @@ local SCRIPTS   <const> = "/lib/modules/lua" -- the kernel's LUA_ROOT
 local MODULES   <const> = "%s/?.lua;%s/?/init.lua" -- the kernel's LUA_PATH_DEFAULT, under a root
 local ELSEWHERE <const> = "a compiled function is defined in the program file or a kernel script it requires, " ..
 	"installed as source"
+local PREDATES  <const> = "%s carries no '%s': the kernel scripts under %s predate the compiler"
 
 local proto = {}
 
@@ -90,17 +91,30 @@ local function search(name)
 end
 table.insert(package.searchers, search) -- last: a module package.path finds is the CLI's Lua and shadows the kernel's
 
+-- kernel scripts older than the compiler lack what it reads, and a nil stops it at a line of its own
+local function strict(path, t, prefix)
+	for key, value in pairs(t) do
+		if type(value) == "table" then
+			strict(path, value, prefix .. key .. ".")
+		end
+	end
+	return setmetatable(t, {__index = function(_, key)
+		error(string.format(PREDATES, path, prefix .. key, root), 0)
+	end})
+end
+
 ---
 -- Loads the kernel script named `name`, from `/lib/modules/lua` or the directory `luaebpf.proto.scripts`
 -- names, past any module the host's path holds under that name.
 -- @function luaebpf.proto.script
 -- @tparam string name a module's name, as a kernel script requires it
--- @treturn any what the script returns
+-- @treturn table what the script returns
 -- @raise the paths searched, where no kernel script carries the name, or what `luaebpf.proto.load`
---   raises
+--   raises; and `<path> carries no '<name>': the kernel scripts under <dir> predate the compiler` where
+--   a read names what the table does not carry, `<name>` dotted from it, as `func.map_lookup_elem`
 function proto.script(name)
 	local path = assert(package.searchpath(name, string.format(MODULES, root, root)))
-	return proto.load(path)(name, path)
+	return strict(path, proto.load(path)(name, path), "")
 end
 
 local function renumber(p)

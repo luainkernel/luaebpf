@@ -599,6 +599,10 @@ Give the variable one type on every path: `local v = 0`. These are refused too:
 * A view read in a function that has assigned the parameter its context or its packet came in: "a
   view is read through the context or a packet, which no parameter of the function holds here". A
   view keeps the offset it starts at and no packet, and its fields are read through that parameter.
+* A method called on a variable that a loop sets to nil, or to another value, after a pass that
+  called it on the packet: "'getbyte' takes the packet, not a packet that may be nil". Lua raises
+  on the pass where the variable is not the packet, and the read would go through whatever word the
+  register holds there.
 * A verdict that may be nil: "the verdict may be nil here; test it first". The kernel would read
   nil as 0, which is an action.
 * A verdict that may be a boolean: "the verdict may be a boolean here; return an action". The
@@ -641,6 +645,7 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 | a runtime is called through its method; write 'limits:run(...)' | `limits(1)` | `limits:run(1)` |
 | a runtime has no method 'call'; write 'limits:run(...)' | `limits:call(1)` | `limits:run(1)` |
 | the function needs 528 bytes of stack, over the 512 eBPF allows | a call into a runtime named by 480 bytes | a shorter name |
+| 'getbyte' takes the packet, not a packet that may be nil | `p:getbyte(i)` in a loop that sets `p = nil` | a variable of its own for nil |
 | a number that may be nil cannot be compared with a number here | `==` on a variable nil on one path | `local v = 0` |
 | a number that may be nil has no truth value in a compiled function | `if v then`, `v` nil on one path | `local v = 0`, then `if v ~= 0 then` |
 | the verdict may be nil here; test it first | `return v`, `v` nil on one path | a verdict on every path |

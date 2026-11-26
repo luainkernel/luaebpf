@@ -156,12 +156,22 @@ local function subprogram(f, pc, ins, state, callee)
 	end
 end
 
+-- the call passes A+1 and the method is lowered for its recv, which a join keeps from a loop's first pass
+local function received(f, pc, ins, state, callee)
+	local recv = state[ins.a + 1]
+	if not frame.same(recv, callee.recv) then
+		frame.refuse(f, pc, "'%s' takes the %s, not a %s", callee.name, frame.typename(callee.recv),
+			frame.typename(recv))
+	end
+end
+
 function call.CALL(f, pc, ins, state)
 	local callee = state[ins.a]
 	if ins.b == 0 or ins.c == 0 then
 		frame.refuse(f, pc, "a call with a variable number of values cannot be compiled")
 	end
 	if callee ~= nil and callee.t == METHOD then
+		received(f, pc, ins, state, callee)
 		packet.method(f, pc, ins, state, callee)
 	elseif callee ~= nil and runtime.isproxy(callee.k) then
 		runtime.call(f, pc, ins, state, callee)

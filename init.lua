@@ -101,8 +101,10 @@ end
 --   `<path>: no program declared` when the body hands nothing to a constructor,
 --   `<btffile>: <reason>`, `<btffile> carries no BTF header` and `<btffile> is shorter than its
 --   BTF header says` when a layout is asked of a file that cannot be read, holds no BTF or is cut
---   short, and `<btffile> is a <order>-endian BTF, for a <order>-endian object` when the BTF a
---   layout was read from is not in the object's byte order
+--   short, `<btffile> is a <order>-endian BTF, for a <order>-endian object` when the BTF a
+--   layout was read from is not in the object's byte order, and `<script> carries no '<name>': the
+--   kernel scripts under <scripts> predate the compiler` when the kernel script at `<script>` does
+--   not carry a table or an entry `<name>` the compiler reads, as `func.map_lookup_elem`
 function luaebpf.compile(path, btffile, scripts)
 	local chunk = proto.load(path)
 	programs.reset()

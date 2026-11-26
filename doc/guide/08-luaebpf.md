@@ -658,6 +658,12 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 | the map key -1 does not fit 'I4' | a key or a value outside its spec | a value its spec packs |
 | module 'byteorder' not found | `require` of a C module | a Lua module under `/lib/modules/lua/`, or the directory `--scripts` names |
 
+Kernel scripts older than the compiler, under `/lib/modules/lua/` or the directory `--scripts` names,
+stop a compile at the first table or entry it reads that they do not carry, with no file and line of
+the program file: `lunatik: /lib/modules/lua/linux/bpf.lua carries no 'max': the kernel scripts under
+/lib/modules/lua predate the compiler`. The directory takes the kernel scripts of the Lunatik the
+compiler's release names, or of a later one.
+
 ## How a program file becomes a program
 
 ```

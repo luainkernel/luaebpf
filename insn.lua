@@ -33,6 +33,7 @@ local TO_BE <const> = 0x08
 local PSEUDO_CALL <const> = 1
 local MAY_GOTO    <const> = 0
 local SIZE  <const> = 8
+local REACH <const> = 0x7fff
 local WORD  <const> = 8
 local BYTE  <const> = 8
 
@@ -77,6 +78,11 @@ insn.reg = {R0 = 0, R1 = 1, R2 = 2, R3 = 3, R4 = 4, R5 = 5, R6 = 6, R7 = 7, R8 =
 --- Bytes one instruction takes in the object.
 -- @field luaebpf.insn.SIZE
 insn.SIZE = SIZE
+
+--- Instructions a jump reaches forward, the most `bpf_insn`'s 16-bit `off` holds; back, it reaches one
+-- more.
+-- @field luaebpf.insn.REACH
+insn.REACH = REACH
 
 ---
 -- Whether a load or a store takes `n` bytes: eBPF has one of 1, 2, 4 and 8, so whatever a compiled
@@ -293,6 +299,21 @@ function code:relocations(kind)
 		end
 	end
 	return found
+end
+
+---
+-- Whether every jump of the buffer reaches its label, which `pack` writes in `bpf_insn`'s 16-bit `off`.
+-- @function luaebpf.insn.code:reaches
+-- @treturn boolean
+function code:reaches()
+	for i = 1, self.n do
+		local target = self.records[i].target
+		local off = target and self.labels[target] - i or 0
+		if off < -REACH - 1 or off > REACH then
+			return false
+		end
+	end
+	return true
 end
 
 ---

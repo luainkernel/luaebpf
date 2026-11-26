@@ -1,0 +1,31 @@
+#
+# SPDX-FileCopyrightText: (c) 2026 Ring Zero Desenvolvimento de Software LTDA
+# SPDX-License-Identifier: MIT OR GPL-2.0-only
+#
+
+name: Build
+on:
+  pull_request:
+  push:
+    branches:
+    - master
+jobs:
+  build:
+    name: Build against Lunatik's master
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        # retry.sh is the harness's
+        submodules: true
+    - name: Checkout Lunatik
+      # make reads lua/ and lunatik_conf.h of the Lunatik checkout LUNATIK names
+      run: |
+        git clone --depth 1 https://github.com/luainkernel/lunatik.git .lunatik
+        git -C .lunatik submodule update --init --depth 1 lua
+    - name: Install dependencies
+      # apt-get update exits 0 on an index it could not fetch, so each try fetches the indexes again
+      run: bash harness/tools/retry.sh 5 90 sudo sh -c 'apt-get update -qq && apt-get install -yq libbpf-dev'
+    - name: Build
+      run: make LUNATIK=.lunatik

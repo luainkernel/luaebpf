@@ -19,27 +19,37 @@ calls the kernel Lua scripts Lunatik runs.
 | `init.lua` and the modules beside it | the compiler, `luaebpf`, a package of the CLI's Lua: `proto.lua` and `undump.lua` read the chunk `lunatic` writes, `emit/` lowers it, a module per construct, `btf.lua`, `elf.lua` and `writer.lua` write the object, `errors.lua` reads the errors a running program counted |
 | `lib/` | the modules a program file's body requires to declare what the object carries, `bpf.xdp`, `bpf.tc`, `bpf.map` and `bpf.vmlinux`; one named as a kernel module of Lunatik is that module's compile-time twin |
 | `loader.c` | `luaebpf.loader`, the C module over libbpf that loads, attaches and pins an object |
-| `bytecode.c` | the program Lunatik's build runs, as `lunatic` is built, to print the tables of the kernel's Lua bytecode the compiler reads |
+| `bytecode.c` | the program `make` runs, as `lunatic` is built, to print the tables of the kernel's Lua bytecode the compiler reads |
 | `doc/guide/` | the guide's two pages of the compiler, which Lunatik's site builds |
 | `doc/design/luaebpf/` | the compiler's design notes |
 | `harness/` | the harness luaebpf shares with Lunatik (luainkernel/harness), mounted as a submodule |
 | `.agents/rules/` | luaebpf's own rules for a kind of file |
 | `.agents/harness.conf` | what the shared scripts of `harness/` read of this tree |
 | `.claude/` | Claude Code's wiring of the guards, the checks, the skills, the agents and the rules, with no logic of its own |
-| `.github/` | the CI workflow |
+| `.github/` | the CI workflows |
 
 ## Build, install, test
 
-luaebpf builds and runs inside a Lunatik checkout, which mounts it at `luaebpf/` (luainkernel/lunatik#2598):
-Lunatik's Makefile builds `lunatic`, the bytecode tables and the loader against its own `lua/` and
-libbpf, and installs the compiler where the CLI's Lua finds it; the program files of its tests live in
-Lunatik's `tests/luaebpf/`, and its examples in Lunatik's `examples/`. A change is built, installed and
-run there, with the mount at the change's commit, as Lunatik's AGENTS.md says of a build and of its
-suite; the program files Lunatik's suite compiles are the compiler's tests.
+    make LUNATIK=<a Lunatik checkout>    # .. by default
+    sudo make install
+    sudo make uninstall
+    make clean
 
-The compiler reads what Lunatik installs, the `linux.*` tables under `/lib/modules/lua`, the ones the
-kernel scripts a program calls read too, and `lunatik.config`: a constant the compiler needs enters
-Lunatik's `autogen/specs.lua` through a pull request of Lunatik.
+`make` builds the loader against libbpf and the bytecode tables, both over the `lua/` of the Lunatik
+checkout `LUNATIK` names, `..` by default, which is Lunatik's root where it mounts luaebpf at
+`luaebpf/` (luainkernel/lunatik#2598); the kernel's table takes that checkout's `lunatik_conf.h` too,
+and the flags Lunatik's Makefile builds `lunatic` with. `sudo make install` puts the compiler under
+the host's `LUA_PATH` as `luaebpf/` and the loader under `LUA_CPATH` as `luaebpf/loader.so`.
+
+The program files of its tests live in Lunatik's `tests/luaebpf/`, and its examples in Lunatik's
+`examples/`. A change is built, installed and run in a Lunatik checkout, with the mount at the
+change's commit, as Lunatik's AGENTS.md says of a build and of its suite; the program files Lunatik's
+suite compiles are the compiler's tests.
+
+The compiler reads what Lunatik installs: `lunatic` on the `PATH`, `lunatik.class` and
+`lunatik.config` under the host's `LUA_PATH`, and under `/lib/modules/lua` the kernel scripts a
+program file's body requires and the `linux.*` tables, the ones those scripts read too. A constant
+the compiler needs enters Lunatik's `autogen/specs.lua` through a pull request of Lunatik.
 
 ### Checks
 

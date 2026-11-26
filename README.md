@@ -26,8 +26,17 @@ sudo lunatik run --dev=eth0 runt
 **Experimental.** The compiler, the modules a program file's body requires and the part of Lua it
 compiles may change in a minor release.
 
-luaebpf builds and runs inside Lunatik, which mounts it at `luaebpf/`; `lunatik bpf` compiles a
-program file and `lunatik run --dev` attaches it. [Compiling Lua to eBPF](doc/guide/08-luaebpf.md) is
+luaebpf runs on a host Lunatik is installed on: `lunatik bpf` compiles a program file and
+`lunatik run --dev` attaches it. `make` builds it against libbpf and a Lunatik checkout with its `lua`
+submodule, the one `LUNATIK` names, `..` by default, where Lunatik mounts luaebpf at `luaebpf/`, and
+`sudo make install` puts it where the host's Lua finds it:
+
+```Shell
+make LUNATIK=../lunatik
+sudo make install
+```
+
+[Compiling Lua to eBPF](doc/guide/08-luaebpf.md) is
 the guide for the author of a program file, [Lua to eBPF by example](doc/guide/09-luaebpf-by-example.md)
 lists what each construct compiles to, and the [design notes](doc/design/luaebpf/README.md) say how
 the compiler is built. [AGENTS.md](AGENTS.md) holds the conventions for contributors.

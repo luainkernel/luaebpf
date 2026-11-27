@@ -59,13 +59,13 @@ end
 
 local function returnvalue(f, pc, state, i)
 	local value = state[i]
-	if f.isprogram then
+	if f.isprogram and f.unit.verdict then
 		checkverdict(f, pc, value)
 	end
 	f.rettype = f.rettype | value.t
 	if f.drop ~= "verdict" then
 		f.code:alu(insn.alu.MOV, insn.reg.R0, frame.getreg(f, pc, state, i, insn.reg.R0))
-		if f.isprogram then
+		if f.isprogram and f.unit.verdict then
 			testverdict(f, pc, value)
 		end
 	end

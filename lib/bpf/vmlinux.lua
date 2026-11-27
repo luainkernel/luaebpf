@@ -27,10 +27,12 @@ local TYPESIZE <const> = 12
 local MEMBER   <const> = 12
 local BYTE     <const> = 8
 local WIDEST   <const> = 8 -- bytes of the widest load
+local POINTER  <const> = 8 -- a pointer is a word on the 64-bit kernels struct_ops runs on
 local NESTING  <const> = 16 -- qualifiers a member's type may be wrapped in, so a cycle ends
 
 -- uapi/linux/btf.h, BTF_KIND_*
 local INT        <const> = 1
+local PTR        <const> = 2
 local ARRAY      <const> = 3
 local STRUCT     <const> = 4
 local UNION      <const> = 5
@@ -273,6 +275,60 @@ function vmlinux.layout(what)
 	local _, info, size = string.unpack(self.order .. "I4I4I4", self.bytes, at)
 	local fields, bitfields = members(self, at, info & 0xffff, info >> 31)
 	return {size = size, fields = fields, bitfields = bitfields}
+end
+
+-- the byte size of a member's type: a pointer a word, an array its element's size times its count,
+-- an integer, struct, union or enum the size its record carries, read through the qualifiers a
+-- declaration may wrap it in
+local function memsize(self, id)
+	for _ = 1, NESTING do
+		local at = self.offsets[id]
+		if at == nil then
+			return nil
+		end
+		local _, info, size = string.unpack(self.order .. "I4I4I4", self.bytes, at)
+		local kind = (info >> 24) & 0x1f
+		if kind == PTR then
+			return POINTER
+		elseif kind == ARRAY then
+			local elem, _, nelems = string.unpack(self.order .. "I4I4I4", self.bytes, at + TYPESIZE)
+			local esize = memsize(self, elem)
+			return esize and esize * nelems
+		elseif qualifiers[kind] then
+			id = size
+		else
+			return size
+		end
+	end
+	return nil
+end
+
+---
+-- The byte offset and size of every member of a kernel struct, by name, and the struct's whole
+-- size. Where `layout` reports only the integer members a `struct` codec reads, this reports every
+-- member -- a function pointer and an array among them -- for a `.struct_ops` the compiler lays out
+-- at the kernel's own offsets, which shift between releases.
+-- @function bpf.vmlinux.members
+-- @tparam string what the struct's name, as `bpftool btf dump` prints it
+-- @treturn table `{size = bytes, members = {<name> = {offset = bytes, size = bytes}, ...}}`
+-- @raise `<path>: <reason>`, when the BTF file cannot be read, and `the kernel BTF has no struct
+--   '<what>'`
+function vmlinux.members(what)
+	local self = reader()
+	local id = self.structs[what]
+	if id == nil then
+		error(("the kernel BTF has no struct '%s'"):format(what), 0)
+	end
+	local at = self.offsets[id]
+	local _, info, size = string.unpack(self.order .. "I4I4I4", self.bytes, at)
+	local vlen, kflag = info & 0xffff, info >> 31
+	local found = {}
+	for i = 0, vlen - 1 do
+		local nameoff, typeid, offset = string.unpack(self.order .. "I4I4I4", self.bytes, at + TYPESIZE + i * MEMBER)
+		local bit = kflag == 1 and offset & 0xffffff or offset
+		found[name(self, nameoff)] = {offset = bit // BYTE, size = memsize(self, typeid)}
+	end
+	return {size = size, members = found}
 end
 
 return vmlinux

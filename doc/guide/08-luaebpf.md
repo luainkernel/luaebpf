@@ -658,6 +658,51 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 | the map key -1 does not fit 'I4' | a key or a value outside its spec | a value its spec packs |
 | module 'byteorder' not found | `require` of a C module | a Lua module under `/lib/modules/lua/`, or the directory `--scripts` names |
 
+## Schedulers
+
+A program file may declare a **scheduler** instead of a device program. A scheduler is a
+`struct sched_ext_ops`, the kernel's `sched_ext` (`CONFIG_SCHED_CLASS_EXT`, Linux 6.12 and later)
+registers as a unit: the functions it carries are its callbacks, each compiled to eBPF and run by
+the kernel at a scheduling event, and its scalar fields configure it. `bpf.scx.scheduler` declares
+one, and the object `lunatik bpf` writes carries a `.struct_ops` section rather than a program per
+device hook.
+
+This first slice is the minimal scheduler, a `name` and an `init` callback that takes no argument
+and returns `0` to let it load:
+
+```Lua
+local scx = require("bpf.scx")
+
+return scx.scheduler{
+	name = "minimal",
+	init = function() return 0 end,
+}
+```
+
+```Shell
+sudo lunatik bpf -o /usr/local/lib/bpf/luaebpf/minimal.bpf.o minimal.bpf.lua
+sudo lunatik run minimal
+```
+
+A scheduler takes **no device**: the kernel attaches it to no interface, it registers its
+`struct_ops` with `sched_ext` as a whole, and from then on it schedules every task. So `lunatik run`
+takes no `--dev`, and one given a scheduler is refused, `minimal is a scheduler and takes no device`,
+as a device program given no `--dev` is refused the missing one. The run registers the scheduler and
+pins the link that holds it at `/sys/fs/bpf/lunatik/minimal/<name>-link`, the way it pins a device
+program's link, so the scheduler stays registered once the command has exited; `lunatik stop minimal`
+unregisters it and the kernel's default scheduler takes over again.
+
+A scheduler names a kernel Lua script beside it as a device program does, `minimal.lua`, whose
+runtime `lunatik run` starts before it registers the scheduler, for a callback that
+[calls into it](#calls-into-a-kernel-lua-runtime); the minimal scheduler names none, so no runtime
+starts and `lunatik list` does not name it.
+
+`lunatik bpf` reads the kernel's `sched_ext_ops` from its BTF, so it compiles a scheduler only where
+that BTF carries the struct, a kernel built with `CONFIG_SCHED_CLASS_EXT`: elsewhere the file is
+refused, `the kernel BTF has no struct 'sched_ext_ops'`. The members the object sets, `init` and
+`name` here, libbpf matches to the kernel's struct by name, at the kernel's own byte offsets and
+whole size, so the object carries only those and loads on any kernel of that layout.
+
 ## How a program file becomes a program
 
 ```

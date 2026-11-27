@@ -6,9 +6,10 @@
 /*
 * luaebpf.loader: the libbpf half of `lunatik run`, a C module of the CLI's Lua. It opens a
 * script's compiled program, pins the maps the program declares under the script's root, attaches
-* every program to a device and pins each link, which keeps the program attached once the command
-* has exited, and reads back an entry of a pinned map. Every function answers nil and a message
-* rather than raising, so the CLI decides what to undo.
+* every program to a device and pins each link, or, where the program is a scheduler the kernel
+* registers, registers each `struct_ops` map and pins its link rather than attaching to a device,
+* which keeps the program attached once the command has exited, and reads back an entry of a pinned
+* map. Every function answers nil and a message rather than raising, so the CLI decides what to undo.
 */
 
 #include <errno.h>
@@ -78,6 +79,12 @@ static inline int lualoader_istcx(const struct bpf_program *program)
 	return strncmp(bpf_program__section_name(program), LUALOADER_TCX, strlen(LUALOADER_TCX)) == 0;
 }
 
+/* a struct_ops map the kernel registers as a unit, a scheduler, which attaches to no device */
+static inline int lualoader_isstructops(const struct bpf_map *map)
+{
+	return bpf_map__type(map) == BPF_MAP_TYPE_STRUCT_OPS;
+}
+
 static struct bpf_link *lualoader_attachprogram(const struct bpf_program *program, int ifindex)
 {
 #if LUALOADER_HASTCX
@@ -132,6 +139,9 @@ static int lualoader_load(lua_State *L)
 		/* .data, which no script opens, and whose dotted name bpffs refuses */
 		else if (bpf_map__is_internal(map))
 			continue;
+		/* a scheduler's ops map is held by the link register pins, not pinned itself */
+		else if (lualoader_isstructops(map))
+			continue;
 		else
 			path = lua_pushfstring(L, "%s/%s", root, bpf_map__name(map));
 		if (bpf_map__set_pin_path(map, path) != 0)
@@ -165,6 +175,51 @@ static int lualoader_attach(lua_State *L)
 			return lualoader_fail(L, "couldn't attach %s: %s", name, lualoader_strerror(errno));
 		err = bpf_link__pin(link, path);
 		bpf_link__destroy(link); /* closes the link: its pin holds it, or the close detaches it */
+		if (err != 0)
+			return lualoader_fail(L, "couldn't pin %s: %s", path, lualoader_strerror(err));
+		lua_pop(L, 1);
+	}
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+/* whether the object carries a struct_ops map, a scheduler the CLI registers with no device */
+static int lualoader_scheduler(lua_State *L)
+{
+	lualoader_t *loader = luaL_checkudata(L, 1, LUALOADER_OBJECT);
+	struct bpf_map *map;
+
+	bpf_object__for_each_map(map, loader->object)
+		if (lualoader_isstructops(map)) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	lua_pushboolean(L, 0);
+	return 1;
+}
+
+/* registers every struct_ops map and pins its link, which holds the scheduler once the command has
+ * exited, the way attach pins a program's; the kernel attaches a scheduler to no device */
+static int lualoader_register(lua_State *L)
+{
+	lualoader_t *loader = luaL_checkudata(L, 1, LUALOADER_OBJECT);
+	const char *root = luaL_checkstring(L, 2);
+	struct bpf_map *map;
+
+	bpf_object__for_each_map(map, loader->object) {
+		const char *name, *path;
+		struct bpf_link *link;
+		int err;
+
+		if (!lualoader_isstructops(map))
+			continue;
+		name = bpf_map__name(map);
+		path = lua_pushfstring(L, LUALOADER_LINK, root, name);
+		link = bpf_map__attach_struct_ops(map);
+		if (link == NULL)
+			return lualoader_fail(L, "couldn't register %s: %s", name, lualoader_strerror(errno));
+		err = bpf_link__pin(link, path);
+		bpf_link__destroy(link); /* closes the link: its pin holds it, or the close unregisters it */
 		if (err != 0)
 			return lualoader_fail(L, "couldn't pin %s: %s", path, lualoader_strerror(err));
 		lua_pop(L, 1);
@@ -252,6 +307,8 @@ static int lualoader_lookup(lua_State *L)
 static const luaL_Reg lualoader_mt[] = {
 	{"load", lualoader_load},
 	{"attach", lualoader_attach},
+	{"scheduler", lualoader_scheduler},
+	{"register", lualoader_register},
 	{"__gc", lualoader_gc},
 	{NULL, NULL}
 };

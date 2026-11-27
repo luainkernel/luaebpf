@@ -98,21 +98,30 @@ function types:integer(name, size, bits)
 end
 
 ---
--- A function and the prototype under it. Parameters are named, as the kernel's BTF checker
--- expects of a prototype that names any of them.
+-- A function prototype. Parameters are named, as the kernel's BTF checker expects of a prototype
+-- that names any of them.
+-- @function luaebpf.btf.types:proto
+-- @tparam table signature `{result, params}`, the result's type id and a type id per parameter
+-- @treturn integer the `FUNC_PROTO` type id
+function types:proto(signature)
+	local params = {}
+	for i, id in ipairs(signature.params) do
+		table.insert(params, string.pack(self.order .. "I4I4", self:string("a" .. i), id))
+	end
+	return self:add(string.pack(self.order .. "I4I4I4", 0, typeinfo(KIND_FUNC_PROTO, #params), signature.result)
+		.. table.concat(params))
+end
+
+---
+-- A function and the prototype under it.
 -- @function luaebpf.btf.types:func
 -- @tparam string name
 -- @tparam integer linkage one of `btf.linkage`
 -- @tparam table signature `{result, params}`, the result's type id and a type id per parameter
 -- @treturn integer the `FUNC` type id
 function types:func(name, linkage, signature)
-	local params = {}
-	for i, id in ipairs(signature.params) do
-		table.insert(params, string.pack(self.order .. "I4I4", self:string("a" .. i), id))
-	end
-	local proto = self:add(string.pack(self.order .. "I4I4I4", 0, typeinfo(KIND_FUNC_PROTO, #params), signature.result)
-		.. table.concat(params))
-	return self:add(string.pack(self.order .. "I4I4I4", self:string(name), typeinfo(KIND_FUNC, linkage), proto))
+	return self:add(string.pack(self.order .. "I4I4I4", self:string(name), typeinfo(KIND_FUNC, linkage),
+		self:proto(signature)))
 end
 
 ---
@@ -151,6 +160,25 @@ function types:struct(name, members)
 	end
 	return self:add(string.pack(self.order .. "I4I4I4", self:string(name), typeinfo(KIND_STRUCT, #members), size)
 		.. table.concat(fields)), size
+end
+
+---
+-- A struct of `members`, each `{name, type, offset}` with `offset` a byte offset, of an explicit
+-- `size`. Where `types:struct` lays its members one word apart, this takes a kernel struct's own
+-- offsets and whole size, for a `.struct_ops` whose members libbpf matches to the kernel's by name.
+-- @function luaebpf.btf.types:record
+-- @tparam string name
+-- @tparam table members
+-- @tparam integer size in bytes
+-- @treturn integer the `STRUCT` type id
+function types:record(name, members, size)
+	local fields = {}
+	for _, member in ipairs(members) do
+		table.insert(fields, string.pack(self.order .. "I4I4I4", self:string(member.name), member.type,
+			member.offset * BYTE))
+	end
+	return self:add(string.pack(self.order .. "I4I4I4", self:string(name), typeinfo(KIND_STRUCT, #members), size)
+		.. table.concat(fields))
 end
 
 ---

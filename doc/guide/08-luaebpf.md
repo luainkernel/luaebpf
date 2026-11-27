@@ -279,7 +279,11 @@ means the program returns `XDP_ABORTED` or `TC_ACT_SHOT`, which drop the packet;
 
 Besides what the table refuses, these are refused: a table constructor, `..`, a closure, an
 assignment to an upvalue or a global, a write to a table that is not a map, a generic `for`,
-`while`, `repeat`, a vararg function and a to-be-closed variable.
+`while`, `repeat`, a vararg function and a to-be-closed variable. So is a function with a jump
+that spans more than the 32767 instructions an eBPF jump reaches, at the line the function is
+defined at: a read of the packet compiles to some fifty instructions, so one function of eleven
+hundred reads is refused. Moved in part to a function it calls, it compiles, since each function
+is compiled apart, with jumps of its own.
 [Messages](#messages) lists what each refusal says.
 
 ## The packet
@@ -641,6 +645,7 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 | a runtime is called through its method; write 'limits:run(...)' | `limits(1)` | `limits:run(1)` |
 | a runtime has no method 'call'; write 'limits:run(...)' | `limits:call(1)` | `limits:run(1)` |
 | the function needs 528 bytes of stack, over the 512 eBPF allows | a call into a runtime named by 480 bytes | a shorter name |
+| the function compiles to 53918 instructions, and a jump in it spans more than the 32767 a jump reaches | a function of eleven hundred reads of the packet | part of it in a function it calls |
 | a number that may be nil cannot be compared with a number here | `==` on a variable nil on one path | `local v = 0` |
 | a number that may be nil has no truth value in a compiled function | `if v then`, `v` nil on one path | `local v = 0`, then `if v ~= 0 then` |
 | the verdict may be nil here; test it first | `return v`, `v` nil on one path | a verdict on every path |

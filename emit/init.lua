@@ -217,6 +217,11 @@ local function compile(unit, fn, read, name, params, isprogram)
 	unit.functions[fn] = f
 	table.insert(unit.order, f)
 	lower(f)
+	if not f.code:reaches() then
+		frame.refuse(f, nil,
+			"the function compiles to %d instructions, and a jump in it spans more than the %d a jump reaches",
+			f.code:len(), insn.REACH)
+	end
 	unit.lowering[fn] = nil
 	return f
 end

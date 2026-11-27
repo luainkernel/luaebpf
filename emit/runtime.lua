@@ -20,7 +20,7 @@ local CTXREG  <const> = 0  -- the program's parameter, which the call passes as 
 local NUL     <const> = 1  -- the byte key__sz counts past the key, which the kfunc writes in place
 local INTSIZE <const> = 4  -- the kfunc answers an int
 local ABSENT  <const> = -1 -- what the kfunc answers where Lua answers nil (luakfunc_action)
-local SELFREG <const> = 1  -- SELF puts the runtime past the method, and the arguments past it
+local SELFREG <const> = 1  -- a method call puts the runtime past the method, and the arguments past it
 
 local proxy = {} -- no method: it marks what lunatik.runtime returns, which SELF and CALL look for
 
@@ -48,16 +48,18 @@ local function written(value)
 	return string.format("'%s:run(...)'", value.name or "runtime")
 end
 
--- 'r:run' reads the one method a runtime has, the kfunc's own verb; r goes to A+1, as SELF puts any
--- receiver, a value the kernel never sees
-function runtime.self(f, pc, ins, state)
+-- 'r:run' reads the one method a runtime has, the kfunc's own verb
+function runtime.self(f, pc, ins, state, name)
 	local recv = state[ins.b]
-	local name = frame.constant(f, pc, ins.c)
 	if name ~= "run" then
 		frame.refuse(f, pc, "a runtime has no method '%s'; write %s", name, written(recv))
 	end
-	state[ins.a + SELFREG] = recv
-	state[ins.a] = {t = RUN, k = recv.k, name = recv.name}
+	state[ins.a] = {t = RUN, name = recv.name, recv = recv, register = ins.a}
+end
+
+-- whether a register holds a runtime, a call of which is refused, or the run method read off one
+function runtime.iscallee(value)
+	return value.t == RUN or runtime.isproxy(value.k)
 end
 
 local function arguments(f, pc, ins, state)
@@ -113,12 +115,19 @@ local function pass(f, key, at, args, nargs)
 	code:set(insn.reg.R5, nargs * frame.SLOT)
 end
 
+-- whether the call is the run method, from the register it was read into, and passes the runtime it was
+-- read off: a method read by index leaves both to the program
+local function ismethod(ins, state, callee)
+	return callee.t == RUN and callee.register == ins.a and ins.b > SELFREG
+		and frame.same(state[ins.a + SELFREG], callee.recv)
+end
+
 function runtime.call(f, pc, ins, state, callee)
-	if callee.t ~= RUN then
+	if not ismethod(ins, state, callee) then
 		frame.refuse(f, pc, "a runtime is called through its method; write %s", written(callee))
 	end
 	placed(f, pc, state, callee)
-	local code, key, nargs = f.code, callee.k.key, arguments(f, pc, ins, state)
+	local code, key, nargs = f.code, callee.recv.k.key, arguments(f, pc, ins, state)
 	local at, args = stage(f, pc, ins, state, key, nargs)
 	pass(f, key, at, args, nargs)
 	code:kfunc(f.unit.kfunc)

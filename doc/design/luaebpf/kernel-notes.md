@@ -229,8 +229,8 @@ under `sudo`.
 * **Exceptions are one way.** `bpf_throw`
   ([helpers.c#L3388](https://github.com/torvalds/linux/blob/v7.2/kernel/bpf/helpers.c#L3388))
   unwinds to the program's exception callback and never returns. `pcall` cannot be compiled; the
-  design does not emit `bpf_throw` either, a failed check returns the error verdict of the
-  program's type, `XDP_ABORTED` or `TC_ACT_SHOT`.
+  design does not emit `bpf_throw` either, a failed check returns the program's error verdict,
+  `XDP_ABORTED` or `TC_ACT_SHOT` where its file names none.
 * **A callee answers through R0 and through the caller's stack, and nothing else.**
   `set_callee_state` copies R1-R5 into the callee, types and ranges included, so `PTR_TO_CTX`,
   `PTR_TO_PACKET` and `PTR_TO_STACK` all propagate

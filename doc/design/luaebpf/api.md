@@ -110,9 +110,10 @@ whose range it does not know. A TC access tests its offset first against `INT_MA
 `bpf_skb_load_bytes` tests itself on the low 32 bits it takes, and reads through the helper,
 whose non-zero answer is its bounds check, so it reads the bytes past the skb's linear head too.
 An access that fails either does not raise (there is nothing to raise to): the program stops and
-returns the **error verdict** of its type, `XDP_ABORTED` in XDP, the kernel's verdict for a
-program error, which drops the packet and, in the generic path and in most drivers, fires the
-`xdp:xdp_exception` tracepoint, and `TC_ACT_SHOT` in TC, which has no error verdict and drops the
+returns its **error verdict**, an action of its type the program file names in the constructor,
+`error`, or where it names none `XDP_ABORTED` in XDP, the kernel's verdict for a program error,
+which drops the packet and, in the generic path and in most drivers, fires the
+`xdp:xdp_exception` tracepoint, and `TC_ACT_SHOT` in TC, which has no such verdict and drops the
 packet. A stop logs what the interpreter would raise there, `<file>:<line>: <reason>`, through
 `bpf_trace_printk`, to the kernel's trace ring, which `bpftool prog tracelog` reads, under the rate
 limit of the kernel's own log, ten lines every five seconds, which the program keeps in its

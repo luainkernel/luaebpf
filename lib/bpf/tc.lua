@@ -11,7 +11,8 @@
 -- sends. It takes one argument, the context, and returns a verdict, a value of `linux.tc.action`,
 -- as a kernel script's tc callback does: `OK`, `SHOT` and `REDIRECT` act, and the rest decides
 -- nothing. Where it computes a verdict that is no action, and where Lua would raise, at a read past
--- the packet or a division by 0, the program stops and returns `TC_ACT_SHOT`, which drops the
+-- the packet or a division by 0, the program stops and returns the error verdict its constructor
+-- names, where it names none `TC_ACT_SHOT`, which drops the
 -- packet, since TC has no verdict for a program error, and logs the error Lua raises there,
 -- `<file>:<line>: <reason>`, to the kernel's trace ring through `bpf_trace_printk`, ten lines every
 -- five seconds at most, and counts every stop at that line, which `lunatik bpf --errors` reports;
@@ -87,20 +88,22 @@ local tc = {}
 -- @tparam function fn the program; it takes the context and returns a verdict.
 -- @tparam table opts `egress`, which attaches the program on the way out rather than in,
 --   `default`, required, the verdict the program returns where its function returns no value, an
---   action, `name`, what the program is called in the object, cut to the fifteen characters
+--   action, `error`, the verdict it returns where it stops, an action, `TC_ACT_SHOT` where it names
+--   none, `name`, what the program is called in the object, cut to the fifteen characters
 --   `BPF_OBJ_NAME_LEN` leaves and made unique against the names already taken, and `license`, a
 --   string, the license the object declares for every program of the file, `Dual MIT/GPL` where it
 --   names none.
 -- @treturn table the declared program
 -- @raise `tc.program takes a Lua function`, or `<file>:<line>: tc.program's default verdict is not
---   an integer`, which a missing `default` raises too, or `is not a TC action`, or
+--   an integer`, which a missing `default` raises too, or `is not a TC action`, and its error
+--   verdict alike, or
 --   `<file>:<line>: tc.program's license is not a string` or `'<license>' is not '<before>', the
 --   license of the programs before it`, the line where `fn` is defined
 function tc.program(fn, opts)
 	opts = opts or {}
 	return programs.declare("tc.program", fn, {section = opts.egress and EGRESS or INGRESS,
-		default = opts.default, error = action.SHOT, name = opts.name, license = opts.license,
-		context = context, kfunc = KFUNC, actions = actions})
+		default = opts.default, error = opts.error == nil and action.SHOT or opts.error, name = opts.name,
+		license = opts.license, context = context, kfunc = KFUNC, actions = actions})
 end
 
 return tc

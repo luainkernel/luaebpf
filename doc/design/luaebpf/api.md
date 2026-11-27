@@ -137,9 +137,10 @@ and the stub falls back.
 
 TC programs get `skb`, a proxy spelled as the kernel's `skb` object a TC callback reaches through
 `ctx:skb()`: `#skb` is the packet's length, `skb:ifindex()` its device's index, `skb:hash()` the
-flow hash the skb carries as it stands, and `skb:priority()` its priority, which
-`skb:priority(v)` sets and answers, the one `__sk_buff` field of the four the kernel lets a
-program write. The kernel object takes a priority from 0 up to `U32_MAX` and raises outside them,
+flow hash the skb carries as it stands, `skb:mark()` its mark and `skb:priority()` its priority,
+which `skb:mark(v)` and `skb:priority(v)` set and answer, the two of its five `__sk_buff` fields
+the kernel lets a program write. The kernel object takes either from 0 up to `U32_MAX` and raises
+outside them,
 so a value the compiler holds outside them is refused at its line and one the program computes
 stops the program. The object has methods and no fields, so a field read or assigned is
 refused, and `__sk_buff`'s `ingress_ifindex`, which it does not carry, is refused too.

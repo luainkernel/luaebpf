@@ -20,13 +20,13 @@
 -- and "the verdict may be a boolean here; return an action".
 --
 -- The program's argument is spelled as the kernel's `skb` object: `#skb` is the packet's length,
--- `skb:ifindex()` its device's index, `skb:hash()` its flow hash and `skb:priority()` its
--- priority, which `skb:priority(v)` sets to a value from 0 up to `U32_MAX`, returning it. A value
--- outside them is refused where the compiler holds it, and stops the program where the program
--- computes it. Any other method is refused, `skb:mark()` among them. `skb.data`/`skb.data_end` are
--- the packet's bounds rather than numbers, and `skb:data()` is the whole packet from `skb->data`,
--- `#skb` bytes long, read as `ctx:packet()` is in `bpf.xdp` whether the skb is linear or not; a
--- layer is refused.
+-- `skb:ifindex()` its device's index, `skb:hash()` its flow hash, `skb:mark()` its mark and
+-- `skb:priority()` its priority, which `skb:mark(v)` and `skb:priority(v)` set to a value from 0
+-- up to `U32_MAX`, returning it. A value outside them is refused where the compiler holds it, and
+-- stops the program where the program computes it. Any other method is refused, `skb:connmark()`
+-- among them. `skb.data`/`skb.data_end` are the packet's bounds rather than numbers, and
+-- `skb:data()` is the whole packet from `skb->data`, `#skb` bytes long, read as `ctx:packet()` is
+-- in `bpf.xdp` whether the skb is linear or not; a layer is refused.
 --
 -- A call into a kernel Lua runtime `lunatik.runtime` names, `r:run(a, b)`, lowers to
 -- `bpf_luatc_run`: it answers the verdict the callback `tc.attach` registered returns, or nil, and
@@ -73,8 +73,8 @@ local actions = programs.actions(action, "a TC action")
 local context = {
 	struct = "__sk_buff",
 	length = "len",
-	methods = {ifindex = "ifindex", hash = "hash", priority = "priority"},
-	writable = {priority = true},
+	methods = {ifindex = "ifindex", hash = "hash", mark = "mark", priority = "priority"},
+	writable = {mark = true, priority = true},
 	packet = {method = "data", layered = true, loadbytes = func.skb_load_bytes, copymax = limits.int.MAX,
 		base = "data", limit = "data_end"},
 }

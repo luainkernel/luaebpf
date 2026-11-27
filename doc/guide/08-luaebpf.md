@@ -175,7 +175,8 @@ fails in one of three places.
 * **Refused.** `lunatik bpf` prints `lunatik: <file>:<line>: <reason>`, exits 1 and writes no
   object. What the subset does not compile is refused, and so is an operation the compiler can see
   is wrong because it knows the value: a `for` step of 0, a map key or value its spec cannot pack,
-  a `skb:priority` outside 0 to 4294967295, a verdict that is no action of its program type.
+  a `skb:mark` or `skb:priority` outside 0 to 4294967295, a verdict that is no action of its
+  program type.
 * **Refused at load.** The kernel's verifier checks the object again when `lunatik run` loads it.
   A program past the verifier's limits, most often a loop of many passes, is refused there:
   `lunatik run` prints the verifier's log, which quotes the Lua lines, exits 1 and leaves nothing
@@ -190,7 +191,8 @@ fails in one of three places.
   `xdp:xdp_exception` too. A program stops
   at a read past the packet, a division or a modulo by 0, a `for` step of 0 it computed, a `for`
   whose passes outrun the budget the kernel gives it, a map key or value its spec cannot pack, a
-  map update or delete the map refuses, a `skb:priority` it computed outside 0 to 4294967295, a
+  map update or delete the map refuses, a `skb:mark` or `skb:priority` it computed outside 0 to
+  4294967295, a
   verdict it computed that is no action of its program type, and in a function it called that
   stops. A division by a 0 the
   compiler knows is not refused: the program stops on every packet that reaches it.
@@ -198,7 +200,8 @@ fails in one of three places.
 A stop logs `<file>:<line>: <reason>`, the file and the line of the check that stopped it, as a
 refusal names them, and the reason the kernel's Lua raises there: "attempt to divide by zero",
 "attempt to perform 'n%0'", "'for' step is zero", "out of bounds" for a read past the packet and
-for a `skb:priority` outside 0 to 4294967295, as the kernel's `data` and `skb` objects raise it,
+for a `skb:mark` or `skb:priority` outside 0 to 4294967295, as the kernel's `data` and `skb`
+objects raise it,
 `string.pack`'s "unsigned overflow" or "integer overflow" for a map key or value its spec cannot
 pack, and "invalid action" for a verdict that is no action, as the kernel logs a callback's. A map
 update or delete the map refuses names the map and the write, "the map 'flows' refused the
@@ -271,6 +274,7 @@ means the program returns `XDP_ABORTED` or `TC_ACT_SHOT`, which drop the packet;
 | [`codec:view(p, at)`](09-luaebpf-by-example.md#views) | the struct the codec lays out, as it lies in `p` from `at` | never | `p` is not the packet; `at` is not a number; another method of the codec |
 | [`h.field`, `h` a view](09-luaebpf-by-example.md#views) | the field at `at` plus its offset, most significant byte first where the layout marks it `bigendian`, or the bitfield taken out of its load | the read passes the end of the packet | the field does not exist; a write; `h` is passed to a function or returned |
 | [`skb:data()`](09-luaebpf-by-example.md#the-context) | the whole packet, linear or not | never | a layer is given |
+| [`skb:mark(v)`](09-luaebpf-by-example.md#the-context) | `v`, stored as the packet's mark | `v` is outside 0 to 4294967295 | a known `v` is outside it |
 | [`skb:priority(v)`](09-luaebpf-by-example.md#the-context) | `v`, stored as the packet's priority | `v` is outside 0 to 4294967295 | a known `v` is outside it |
 | [`m[k]`](09-luaebpf-by-example.md#maps) | the value, or nil | `k` does not fit the key's spec | a known `k` does not fit it; the value is used before `if v then` tests it |
 | [`m[k] = v`, `m[k] = nil`](09-luaebpf-by-example.md#maps) | the entry inserted or replaced, or deleted | the map refuses; `k` or `v` does not fit its spec | a known `k` or `v` does not fit it |
@@ -290,9 +294,9 @@ hook, and opens the packet:
 | Program | The context offers |
 |---------|--------------------|
 | XDP | `ctx:packet()`, the packet; `ctx:ingress()`, the index of the device it arrived on; `ctx:queue()`, the receive queue it arrived in |
-| TC | `skb:data()`, the packet; `#skb`, its length; `skb:ifindex()`, the index of its device; `skb:hash()`, its flow hash; `skb:priority()`, its priority, which `skb:priority(v)` sets and returns |
+| TC | `skb:data()`, the packet; `#skb`, its length; `skb:ifindex()`, the index of its device; `skb:hash()`, its flow hash; `skb:mark()`, its mark, which `skb:mark(v)` sets and returns; `skb:priority()`, its priority, which `skb:priority(v)` sets and returns |
 
-Any other method is refused: `skb:mark()` gives "the context has no method 'mark'". The packet
+Any other method is refused: `skb:connmark()` gives "the context has no method 'connmark'". The packet
 is a read-only view of its bytes, with the reads of the kernel's `data` object. An offset counts
 from 0, the first byte of the Ethernet header. On TC the packet is the whole skb, the bytes past
 its linear head included, as the kernel's `skb:data()` reads it in a tc callback: a segment the
@@ -629,7 +633,7 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 | a compiled function returns at most one value | `return a, b` in a callee | one value |
 | recursion through 'walk' | a function that calls itself | a `for` |
 | the packet has no method 'getuint64' | `getuint64`, `setbyte` | the reads of [The packet](#the-packet) |
-| the context has no method 'mark' | `skb:mark()`, `ctx:argument()` | the methods of [The packet](#the-packet) |
+| the context has no method 'connmark' | `skb:connmark()`, `ctx:argument()` | the methods of [The packet](#the-packet) |
 | 'data_end' is a packet bound, not a number; '#' on the packet is its length | `ctx.data_end - ctx.data` | `#p` |
 | 'flows' may be nil here; test it first | a lookup, or the answer of a call into a runtime, used untested | `if v then` |
 | attempt to compare a runtime answer with a number | `limits:run(1) < 5` | `if v then`, then `v < 5` |

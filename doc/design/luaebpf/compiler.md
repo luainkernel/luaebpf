@@ -212,7 +212,7 @@ the line the interpreter's error would carry, `<chunk>:<line>: <reason>`, chunk 
 refusal spells them, and then jumps to the tail, through the destroy of every iterator the check is
 in. The reason is the interpreter's text for the operation: `attempt to divide by zero` and
 `attempt to perform 'n%0'` (`luaV_idiv`, `luaV_mod`), `'for' step is zero` (`forprep`),
-`out of bounds` for a packet read (`luadata_checkbounds`) and a `skb:priority`
+`out of bounds` for a packet read (`luadata_checkbounds`) and a `skb:mark` or `skb:priority`
 (`lunatik_checkbounds`), `unsigned overflow` and `integer overflow` for a map key or value
 (`string.pack`), and `invalid action` for a verdict (`luakfunc_action`). A map write the map refuses
 names the map and the write, "the map 'flows' refused the update", since the errno the kernel's

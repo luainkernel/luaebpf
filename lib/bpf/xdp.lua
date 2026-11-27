@@ -10,7 +10,8 @@
 -- `program` is compiled to eBPF and runs in the kernel on each packet the device receives. It takes
 -- one argument, the context, and returns a verdict, a value of `linux.xdp.action`, as a kernel
 -- script's xdp callback does. Where it computes a verdict that is no action, and where Lua would
--- raise, at a read past the packet or a division by 0, the program stops and returns `XDP_ABORTED`,
+-- raise, at a read past the packet or a division by 0, the program stops and returns the error
+-- verdict its constructor names, where it names none `XDP_ABORTED`,
 -- the kernel's verdict for a program error, which drops the packet, and logs the error Lua raises
 -- there, `<file>:<line>: <reason>`, to the kernel's trace ring through `bpf_trace_printk`, ten
 -- lines every five seconds at most, and counts every stop at that line, which
@@ -78,20 +79,22 @@ local xdp = {}
 -- @function bpf.xdp.program
 -- @tparam function fn the program; it takes the context and returns a verdict.
 -- @tparam table opts `default`, required, the verdict the program returns where its function
---   returns no value, an action, `name`, what the program is called in the object, cut to the
+--   returns no value, an action, `error`, the verdict it returns where it stops, an action,
+--   `XDP_ABORTED` where it names none, `name`, what the program is called in the object, cut to the
 --   fifteen characters `BPF_OBJ_NAME_LEN` leaves and made unique against the names already taken,
 --   and `license`, a string, the license the object declares for every program of the file,
 --   `Dual MIT/GPL` where it names none.
 -- @treturn table the declared program
 -- @raise `xdp.program takes a Lua function`, or `<file>:<line>: xdp.program's default verdict is not
---   an integer`, which a missing `default` raises too, or `is not an XDP action`, or
+--   an integer`, which a missing `default` raises too, or `is not an XDP action`, and its error
+--   verdict alike, or
 --   `<file>:<line>: xdp.program's license is not a string` or `'<license>' is not '<before>', the
 --   license of the programs before it`, the line where `fn` is defined
 function xdp.program(fn, opts)
 	opts = opts or {}
 	return programs.declare("xdp.program", fn, {section = SECTION, default = opts.default,
-		error = action.ABORTED, name = opts.name, license = opts.license, context = context, kfunc = KFUNC,
-		actions = actions})
+		error = opts.error == nil and action.ABORTED or opts.error, name = opts.name, license = opts.license,
+		context = context, kfunc = KFUNC, actions = actions})
 end
 
 return xdp

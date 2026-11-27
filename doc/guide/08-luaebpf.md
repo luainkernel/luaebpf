@@ -106,8 +106,9 @@ sudo lunatik stop protocols
 
   where the program computes a value that is no action, and where
   Lua would raise, at a read past the packet or x // 0, the
-  program stops: XDP_ABORTED in XDP, TC_ACT_SHOT in TC, either one
-  dropping the packet; where it returns no value, its default verdict
+  program stops: its error verdict, where it names none XDP_ABORTED
+  in XDP and TC_ACT_SHOT in TC, either one dropping the packet;
+  where it returns no value, its default verdict
 ```
 
 A program returns its verdict, which tells the kernel what to do with the packet: a value of
@@ -135,15 +136,28 @@ return xdp.program(filter, {default = action.DROP})
 ```
 
 A program that stops, where Lua would raise, where the verdict it computed is no action or where a
-`for` outruns the budget the kernel gives it, does not return its default. An XDP program returns
-`XDP_ABORTED`, the kernel's verdict for a program error, which drops the packet and, in the generic
-path and in most drivers, fires the tracepoint `xdp:xdp_exception`; a TC program, whose type has no
-such verdict, returns `TC_ACT_SHOT`, which
-drops the packet. A packet the program cannot read is dropped, whatever its default: a program that
-must let it through tests `#p` before it reads. A default that is not an action is refused:
-"xdp.program's default verdict is not an XDP action". A value the program computes reaches a kernel
-script through a map, or as the argument of a [call into a runtime](#calls-into-a-kernel-lua-runtime),
-not through the verdict.
+`for` outruns the budget the kernel gives it, returns its error verdict, which the constructor names
+as `error`, an action of the program's type. A program that names none returns `XDP_ABORTED` in
+XDP, the kernel's verdict for a program error, which drops the packet and, in the generic path and
+in most drivers, fires the tracepoint `xdp:xdp_exception`, and `TC_ACT_SHOT` in TC, whose type has
+no such verdict, which drops the packet. A program that must let a packet through where it stops,
+as a filter that is to fail open, names the action that does:
+
+```Lua
+return xdp.program(filter, {default = action.DROP, error = action.PASS})
+```
+
+A stop that is to return the default names the same action in both,
+`{default = action.PASS, error = action.PASS}`. The verdict is the program's, so two programs of one
+file may name two, and a function both call stops each with its own. A stop returns at once and
+undoes nothing: what the program wrote before it, a map entry or `skb:priority`, stays written, and
+the packet goes on with it under a verdict that lets it. The kernel fires the tracepoint for the
+verdict `XDP_ABORTED`, and for an `XDP_TX` or an `XDP_REDIRECT` it fails to carry out, so the stops
+of an XDP program whose error verdict is another action are not read there, but in the trace ring
+and with `lunatik bpf --errors`. A default or an error verdict that is not an action
+is refused: "xdp.program's default verdict is not an XDP action", "tc.program's error verdict is
+not a TC action". A value the program computes reaches a kernel script through a map, or as the
+argument of a [call into a runtime](#calls-into-a-kernel-lua-runtime), not through the verdict.
 
 ## When a program cannot be compiled or computed
 
@@ -153,10 +167,12 @@ not through the verdict.
         | lunatik bpf            | lunatik run --dev      | on the device
         v                        v                        v
   REFUSED                  REFUSED AT LOAD          STOPS
-  lunatik: file:line:      the verifier log,        XDP_ABORTED or
-  reason; exit 1, no       which quotes the Lua     TC_ACT_SHOT: the packet
-  object written           line; exit 1, nothing    is dropped,
-                           attached                 file:line: reason goes
+  lunatik: file:line:      the verifier log,        its error verdict,
+  reason; exit 1, no       which quotes the Lua     XDP_ABORTED or
+  object written           line; exit 1, nothing    TC_ACT_SHOT where it
+                           attached                 names none, which drop
+                                                    the packet;
+                                                    file:line: reason goes
                                                     to the trace ring, and
                                                     the stop is counted at
                                                     that line
@@ -175,7 +191,8 @@ fails in one of three places.
 * **Refused.** `lunatik bpf` prints `lunatik: <file>:<line>: <reason>`, exits 1 and writes no
   object. What the subset does not compile is refused, and so is an operation the compiler can see
   is wrong because it knows the value: a `for` step of 0, a map key or value its spec cannot pack,
-  a `skb:priority` outside 0 to 4294967295, a verdict that is no action of its program type.
+  a `skb:priority` outside 0 to 4294967295, a verdict that is no action of its program type, the
+  default and the error verdict a constructor names among them.
 * **Refused at load.** The kernel's verifier checks the object again when `lunatik run` loads it.
   A program past the verifier's limits, most often a loop of many passes, is refused there:
   `lunatik run` prints the verifier's log, which quotes the Lua lines, exits 1 and leaves nothing
@@ -184,10 +201,11 @@ fails in one of three places.
   ([Calls into a kernel Lua runtime](#calls-into-a-kernel-lua-runtime)), and so are a program that
   may stop and one that calls into a runtime under a license the kernel does not count as
   GPL-compatible ([The license](#the-license)).
-* **Stops.** In the kernel, on a packet, the program returns at once `XDP_ABORTED` in XDP or
-  `TC_ACT_SHOT` in TC, which drop the packet, logs the error the kernel's Lua raises there and
-  counts the stop at its line; a tracer reads an XDP program's stops at the tracepoint
-  `xdp:xdp_exception` too. A program stops
+* **Stops.** In the kernel, on a packet, the program returns at once its error verdict,
+  `XDP_ABORTED` in XDP or `TC_ACT_SHOT` in TC where it names none, which drop the packet, logs the
+  error the kernel's Lua raises there and counts the stop at its line; a tracer reads the stops of
+  an XDP program that returns `XDP_ABORTED` at the tracepoint `xdp:xdp_exception` too. A program
+  stops
   at a read past the packet, a division or a modulo by 0, a `for` step of 0 it computed, a `for`
   whose passes outrun the budget the kernel gives it, a map key or value its spec cannot pack, a
   map update or delete the map refuses, a `skb:priority` it computed outside 0 to 4294967295, a
@@ -246,7 +264,8 @@ add before its line is logged; where the program does not stop, nothing changes.
 ## The Lua a program may use
 
 A compiled function computes what the kernel's Lua computes, or stops, or is refused. "Stops"
-means the program returns `XDP_ABORTED` or `TC_ACT_SHOT`, which drop the packet; "refused" means
+means the program returns its error verdict, `XDP_ABORTED` or `TC_ACT_SHOT`, which drop the packet,
+where it names none; "refused" means
 `lunatik bpf` refuses the file at that line. Each construct links to its listing.
 
 | You write | The program gives | It stops when | It is refused when |
@@ -647,8 +666,10 @@ Each refusal reads `lunatik: <file>:<line>: <message>`.
 | the verdict may be a boolean here; return an action | `return ip.protocol == ipproto.TCP` | `if ip.protocol == ipproto.TCP then return action.DROP end` |
 | the verdict 11 is not an XDP action | `return 11`, a value no action of the program's type | an action of `linux.xdp.action` or `linux.tc.action` |
 | xdp.program's default verdict is not an XDP action | `{default = 5}` | `{default = action.DROP}` |
+| xdp.program's error verdict is not an XDP action | `{error = 5}` | `{error = action.PASS}` |
 | 'luaebpf_errors' is the map a program's errors are counted in | `map.hash("luaebpf_errors", spec)` | another name |
 | xdp.program's default verdict is not an integer | `xdp.program(fn)`, `{default = "drop"}` | `xdp.program(fn, {default = action.PASS})`, and `tc.program` alike |
+| xdp.program's error verdict is not an integer | `{error = "pass"}`, `{error = true}` | `{error = action.PASS}`, or no `error`, and `tc.program` alike |
 | xdp.program's license is not a string | `{license = 2}` | `{license = "GPL"}` |
 | tc.program's license 'GPL' is not 'Dual MIT/GPL', the license of the programs before it | `license = "GPL"` on one program of a file, and none on another | the same `license` on every program |
 | 'half' is a float, which a compiled function cannot hold | `local half = math.sqrt(4)` in the body | an integer |

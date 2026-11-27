@@ -59,8 +59,8 @@ layouts the body reads come from the BTF `compile` opened.
 
 ### Programs and maps
 
-A program constructor leaves each program in `programs.lua`: its function, its default verdict, the
-error verdict of its type, `XDP_ABORTED` or `TC_ACT_SHOT`, its name if the file gave one, its
+A program constructor leaves each program in `programs.lua`: its function, its default verdict, its
+error verdict, `XDP_ABORTED` or `TC_ACT_SHOT` if the file gave none, its name if it gave one, its
 license, `Dual MIT/GPL` if it gave none, the ELF
 section its kind names, `xdp`, `tcx/ingress` or `tcx/egress`,
 from which libbpf reads the program type and the attach point, the actions a verdict of its type
@@ -200,7 +200,8 @@ words pass 512 bytes.
 
 A zero divisor, a read past the packet, a key or a value its map's spec cannot pack: where the
 interpreter would raise, the compiled function jumps to its abort tail. In the program's own frame
-the tail returns the error verdict of the program's type, `XDP_ABORTED`, the kernel's verdict for a
+the tail returns the program's error verdict, where its file names none `XDP_ABORTED`, the kernel's
+verdict for a
 program error, or `TC_ACT_SHOT` in TC, which has none; the default verdict is what the program
 returns where its function returns no value. In a subprogram the tail stores a one through the
 address its caller passed and sets R0, which the verifier reads on every path out, and the caller,

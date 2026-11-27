@@ -12,8 +12,9 @@ these sections.
 ## What the compiler emits
 
 A construct the compiler lowers computes what the kernel's Lua computes, stops the program where Lua
-would raise or where a `for` outruns the budget the kernel gives it, with `XDP_ABORTED` in XDP and
-`TC_ACT_SHOT` in TC, logging the error Lua raises there, or is refused at its line. Where the eBPF
+would raise or where a `for` outruns the budget the kernel gives it, with the program's error
+verdict, `XDP_ABORTED` in XDP and `TC_ACT_SHOT` in TC where it names none, logging the error Lua
+raises there, or is refused at its line. Where the eBPF
 instruction alone computes something else, the compiler emits what lies between:
 
 | Lua | Lua computes | The instruction alone | The compiler emits |
@@ -87,8 +88,9 @@ The registers:
   each loop whose bound the program computes.
 * `r1` to `r5` hold what one line computes.
 
-Every listing ends with the instructions where the function stops: `XDP_ABORTED` or `TC_ACT_SHOT`,
-and the exit, under the line that closes the function, whatever default verdict it names. After
+Every listing ends with the instructions where the function stops: the program's error verdict,
+`XDP_ABORTED` or `TC_ACT_SHOT` in every listing here, whose programs name none, and the exit, under
+the line that closes the function, whatever default verdict it names. After
 them comes a block for each check that stops it, under the check's line, which counts the stop at
 the place of the line the check stands for, `<file>:<line>: <reason>`, logs that line and jumps to
 them. [The packet](#the-packet) shows one whole, and the other listings one line each, whose

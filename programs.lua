@@ -40,13 +40,12 @@ function programs.actions(action, name)
 	return {first = first, last = last, name = name}
 end
 
--- what a default verdict must be and is not, or nil where it is one of its program type's actions
-local function unmet(program)
-	local default, actions = program.default, program.actions
-	if math.type(default) ~= "integer" then
+-- what a verdict must be and is not, or nil where it is one of its program type's actions
+local function unmet(verdict, actions)
+	if math.type(verdict) ~= "integer" then
 		return "an integer"
 	end
-	if default < actions.first or default > actions.last then
+	if verdict < actions.first or verdict > actions.last then
 		return actions.name
 	end
 end
@@ -68,6 +67,16 @@ local function refuse(constructor, fn, reason)
 	error(string.format("%s:%d: %s's %s", info.short_src, info.linedefined, constructor, reason), 0)
 end
 
+local function checkverdicts(constructor, fn, program)
+	-- the type's own error verdict is one of its actions, or nil where the kernel scripts lack it
+	for _, verdict in ipairs(program.error == nil and {"default"} or {"default", "error"}) do
+		local expected = unmet(program[verdict], program.actions)
+		if expected ~= nil then
+			refuse(constructor, fn, verdict .. " verdict is not " .. expected)
+		end
+	end
+end
+
 ---
 -- Records one program, held to what every constructor takes.
 -- @function luaebpf.programs.declare
@@ -78,17 +87,15 @@ end
 --   it is nil
 -- @treturn table the program, with `fn`
 -- @raise `<constructor> takes a Lua function`, or `<file>:<line>: <constructor>'s default verdict
---   is not an integer` or `is not <actions.name>`, or `<file>:<line>: <constructor>'s license is
+--   is not an integer` or `is not <actions.name>`, and its error verdict alike, or
+--   `<file>:<line>: <constructor>'s license is
 --   not a string` or `'<license>' is not '<before>', the license of the programs before it`, the
 --   line where `fn` is defined
 function programs.declare(constructor, fn, program)
 	if type(fn) ~= "function" or debug.getinfo(fn, "S").what == "C" then
 		error(string.format("%s takes a Lua function", constructor), 2) -- each constructor tail-calls declare
 	end
-	local expected = unmet(program)
-	if expected ~= nil then
-		refuse(constructor, fn, "default verdict is not " .. expected)
-	end
+	checkverdicts(constructor, fn, program)
 	if program.license == nil then
 		program.license = LICENSE
 	end
